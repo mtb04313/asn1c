@@ -28,6 +28,11 @@
 #include <stdarg.h>	/* For va_start */
 #include <stddef.h>	/* for offsetof and ptrdiff_t */
 
+#if 1 // PSoC added
+#include <inttypes.h> /* C99 specifies this file */
+#define sys_ntohl(foo)  __ntohl(foo)
+
+#else
 #ifdef	_WIN32
 
 #include <malloc.h>
@@ -80,6 +85,7 @@ typedef	unsigned int	uint32_t;
 #endif	/* defined(__vxworks) */
 
 #endif	/* _WIN32 */
+#endif
 
 #if	__GNUC__ >= 3 || defined(__clang__)
 #define CC_ATTRIBUTE(attr)    __attribute__((attr))

@@ -71,6 +71,10 @@ GeneralizedTime_t *asn_time2GT(GeneralizedTime_t *_optional_gt,
 GeneralizedTime_t *asn_time2GT_frac(GeneralizedTime_t *_optional_gt,
 	const struct tm *, int frac_value, int frac_digits, int force_gmt);
 
+/* PSoC added */
+void GeneralizedTime_initialize(void);
+void GeneralizedTime_destroy(void);
+
 #ifdef __cplusplus
 }
 #endif

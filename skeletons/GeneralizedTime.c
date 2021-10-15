@@ -11,15 +11,40 @@
 #include <asn_internal.h>
 #include <GeneralizedTime.h>
 
+#if 1 // PSoC added
+#include "cyabs_rtos.h" // PSoC added
+#include <time.h>
+
+#else
 #ifdef	__CYGWIN__
 #include "/usr/include/time.h"
 #else
 #include <time.h>
 #endif	/* __CYGWIN__ */
+#endif
 
 #include <stdio.h>
 #include <errno.h>
 
+#if 1 // PSoC added
+static cy_mutex_t s_mutex_timegm;       /* mutex protects timegm */
+
+void GeneralizedTime_initialize(void)
+{
+  // PSoC added
+  cy_rtos_init_mutex(&s_mutex_timegm);
+}
+
+void GeneralizedTime_destroy(void)
+{
+  // PSoC added
+  cy_rtos_deinit_mutex(&s_mutex_timegm);
+}
+
+#define _EMULATE_TIMEGM
+#endif // PSoC added
+
+#if 0 // PSoC removed
 #if	defined(_WIN32)
 #pragma message( "PLEASE STOP AND READ!")
 #pragma message( "  localtime_r is implemented via localtime(), which may be not thread-safe.")
@@ -63,10 +88,14 @@ static struct tm *gmtime_r(const time_t *tloc, struct tm *result) {
 #undef	HAVE_TM_GMTOFF
 #define	HAVE_TM_GMTOFF
 #endif	/* BSDs and newer glibc */
+#endif
 
 /*
  * Where to look for offset from GMT, Phase II.
  */
+#define GMTOFF(tm)  (-_timezone)  // PSoC added
+
+#if 0 // PSoC removed
 #ifdef	HAVE_TM_GMTOFF
 #define	GMTOFF(tm)	((tm).tm_gmtoff)
 #else	/* HAVE_TM_GMTOFF */
@@ -142,17 +171,23 @@ static long GMTOFF(struct tm a){
 	}								\
 	tzset();							\
 } while(0); } while(0);
+#endif
 
 #ifndef HAVE_TIMEGM
 #ifdef	_EMULATE_TIMEGM
 #include <stdlib.h>
 static time_t timegm(struct tm *tm) {
-	time_t tloc;
-	ATZVARS;
-	ATZSAVETZ;
-	tloc = mktime(tm);
-	ATZOLDTZ;
-	return tloc;
+  if (cy_rtos_get_mutex(&s_mutex_timegm, CY_RTOS_NEVER_TIMEOUT) == CY_RSLT_SUCCESS) {
+      time_t tloc;
+	  //ATZVARS;    // PSoC removed
+	  //ATZSAVETZ;  // PSiC removed
+	  tloc = mktime(tm);
+	  //ATZOLDTZ;   // PSoC removed
+  
+	  cy_rtos_set_mutex(&s_mutex_timegm);
+	  return tloc;
+  }
+  return 0;
 }
 #endif	/* _EMULATE_TIMEGM */
 #endif
@@ -736,7 +771,7 @@ GeneralizedTime_random_fill(const asn_TYPE_descriptor_t *td, void **sptr,
         "19700101000000Z",   "19700101000000.3Z",     "19821106210623.3",
         "19821106210629.3Z", "19691106210827.3-0500", "19821106210629.456",
     };
-    size_t rnd = asn_random_between(0, sizeof(values)/sizeof(values[0])-1);
+    size_t rnd = (size_t)asn_random_between(0, sizeof(values)/sizeof(values[0])-1);
 
     (void)constraints;
 
